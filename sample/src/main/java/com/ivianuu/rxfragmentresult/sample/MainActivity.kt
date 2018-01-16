@@ -1,5 +1,7 @@
 package com.ivianuu.rxfragmentresult.sample
 
+import android.app.Activity
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v4.app.Fragment
@@ -10,7 +12,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import com.ivianuu.rxfragmentresult.ResultListener
 import com.ivianuu.rxfragmentresult.RxFragmentResult
 import com.ivianuu.rxfragmentresult.Transactor
 import io.reactivex.disposables.Disposable
@@ -53,7 +54,7 @@ class FirstFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         view.findViewById<Button>(R.id.request).setOnClickListener {
-            rxFragmentResult.start<String>(SecondFragment())
+            rxFragmentResult.start(SecondFragment())
                     .subscribe { Log.d("RxFragmentResult", "on result $it ") }
                     .let { disposable = it }
         }
@@ -76,7 +77,9 @@ class SecondFragment : Fragment() {
 
         view.findViewById<Button>(R.id.send_result).setOnClickListener {
             val text = view.findViewById<EditText>(R.id.input).text.toString()
-            (targetFragment as ResultListener?)?.onFragmentResult(targetRequestCode, text)
+            targetFragment?.onActivityResult(targetRequestCode, Activity.RESULT_OK, Intent().apply {
+                putExtra("text", text)
+            })
             activity?.onBackPressed()
         }
     }

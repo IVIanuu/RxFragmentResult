@@ -51,9 +51,9 @@ class RxFragmentResult {
         this.transactor = transactor
     }
 
-    fun <T> start(requestFragment: Fragment): Maybe<T> {
+    fun start(requestFragment: Fragment): Maybe<FragmentResult> {
         val resultFragment = RxFragmentResultFragment.get(fm)
-        val maybe = resultFragment.registerFragmentResult<T>(requestFragment)
+        val maybe = resultFragment.registerFragmentResult(requestFragment)
         transactor.transact(fm, requestFragment)
         return maybe
     }
@@ -67,16 +67,21 @@ interface Transactor {
 }
 
 /**
- * Consumes fragment results
+ * Represents a fragment result
  */
-interface ResultListener {
-    fun <T> onFragmentResult(requestCode: Int, result: T)
+data class FragmentResult(val requestCode: Int,
+                          val resultCode: Int,
+                          val data: Intent?) {
+
+    fun isOk() = resultCode == Activity.RESULT_OK
+
+    fun isCanceled() = resultCode == Activity.RESULT_CANCELED
 }
 
 /**
  * Handles the activity results
  */
-class RxFragmentResultFragment : Fragment(), ResultListener {
+class RxFragmentResultFragment : Fragment() {
 
     private val subjects = HashMap<Int, PublishSubject<*>>()
 
@@ -84,15 +89,16 @@ class RxFragmentResultFragment : Fragment(), ResultListener {
         retainInstance = true
     }
 
-    override fun <T> onFragmentResult(requestCode: Int, result: T) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         if (!subjects.containsKey(requestCode)) return
-        handleFragmentResult(requestCode, result)
+        handleActivityResult(requestCode, resultCode, data)
     }
 
-    internal fun <T> registerFragmentResult(requestFragment: Fragment): Maybe<T> {
+    internal fun registerFragmentResult(requestFragment: Fragment): Maybe<FragmentResult> {
         val requestCode = RequestCodeGenerator.generate()
 
-        val subject = PublishSubject.create<T>()
+        val subject = PublishSubject.create<FragmentResult>()
         subjects.put(requestCode, subject)
 
         requestFragment.setTargetFragment(this, requestCode)
@@ -102,10 +108,11 @@ class RxFragmentResultFragment : Fragment(), ResultListener {
                 .singleElement()
     }
 
-    private fun <T> handleFragmentResult(requestCode: Int,
-                                         result: T) {
-        val subject = subjects.remove(requestCode) as PublishSubject<T>? ?: return
-        subject.onNext(result)
+    private fun handleActivityResult(requestCode: Int,
+                                     resultCode: Int,
+                                     data: Intent?) {
+        val subject = subjects.remove(requestCode) as PublishSubject<FragmentResult>? ?: return
+        subject.onNext(FragmentResult(requestCode, resultCode, data))
         subject.onComplete()
     }
 
