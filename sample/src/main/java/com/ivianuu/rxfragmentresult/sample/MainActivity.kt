@@ -53,7 +53,7 @@ class FirstFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         view.findViewById<Button>(R.id.request).setOnClickListener {
-            rxFragmentResult.startCustom<String>(SecondFragment())
+            rxFragmentResult.start<String>(SecondFragment())
                     .subscribe { Log.d("RxFragmentResult", "on result $it ") }
                     .let { disposable = it }
         }
